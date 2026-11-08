@@ -81,6 +81,14 @@ class Order extends AuditableEntity {
         this.holdExpiresAt = null;
     }
 
+    /** The customer got the money back (or the event was cancelled). Only a PAID order can be refunded. */
+    void refund() {
+        if (status != OrderStatus.PAID) {
+            throw new ConflictException("Only a paid order can be refunded.");
+        }
+        this.status = OrderStatus.REFUNDED;
+    }
+
     /** The hold ran out without payment. Only a PENDING order can expire. */
     void expire() {
         requirePending("expired");

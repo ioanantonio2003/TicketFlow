@@ -62,7 +62,7 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         service = new OrderService(orderRepository, orderItemRepository, seatHoldRepository, orderReadRepository,
-                eventCatalog, new HoldProperties(Duration.ofMinutes(10), 6, Duration.ofSeconds(30), 100), Clock.fixed(NOW, ZoneOffset.UTC),
+                eventCatalog, new HoldProperties(Duration.ofMinutes(10), 6, Duration.ofSeconds(30), 100, Duration.ofHours(24)), Clock.fixed(NOW, ZoneOffset.UTC),
                 events);
     }
 

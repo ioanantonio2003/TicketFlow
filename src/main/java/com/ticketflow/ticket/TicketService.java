@@ -11,9 +11,11 @@ import com.ticketflow.ticket.dto.TicketResponse;
 import com.ticketflow.ticket.dto.TicketValidationResponse;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,6 +32,7 @@ class TicketService {
     private final OrderSeats orderSeats;
     private final EventCatalog eventCatalog;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     /**
      * One ticket per seat of the paid order. Safe to call twice for the same order (a redelivered event): if the
@@ -47,11 +50,21 @@ class TicketService {
         }
         String eventTitle = eventCatalog.get(paid.eventId()).title();
         List<OrderItemResponse> seats = orderSeats.of(paid.orderId());
+        List<TicketsIssued.IssuedTicket> issued = new ArrayList<>();
         for (OrderItemResponse seat : seats) {
-            ticketRepository.save(new Ticket(paid.orderId(), paid.eventId(), seat.eventSeatId(), paid.customerId(),
-                    codeGenerator.next(), eventTitle, seat.section(), seat.row(), seat.seatNumber()));
+            Ticket ticket = new Ticket(paid.orderId(), paid.eventId(), seat.eventSeatId(), paid.customerId(),
+                    codeGenerator.next(), eventTitle, seat.section(), seat.row(), seat.seatNumber());
+            ticketRepository.save(ticket);
+            issued.add(new TicketsIssued.IssuedTicket(seat.section(), seat.row(), seat.seatNumber(), ticket.getCode()));
         }
+        events.publishEvent(new TicketsIssued(paid.orderId(), paid.customerId(), paid.eventId(), eventTitle, issued));
         return seats.size();
+    }
+
+    /** Joins the caller's transaction (the refund). */
+    @Transactional
+    void cancelValidTicketsOf(Long orderId) {
+        ticketRepository.cancelValidOfOrder(orderId, clock.instant());
     }
 
     @Transactional(readOnly = true)

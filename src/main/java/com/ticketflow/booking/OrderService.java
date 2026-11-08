@@ -83,6 +83,8 @@ class OrderService {
         order.cancel();
         seatHoldRepository.releaseSeats(List.of(order.getId()))
                 .forEach((eventId, seatIds) -> events.publishEvent(new SeatsReleased(eventId, seatIds)));
+        events.publishEvent(new OrderCancelled(order.getId(), order.getCustomerId(), order.getEventId(),
+                CancellationReason.CUSTOMER_REQUEST));
         return toResponse(order);
     }
 

@@ -69,9 +69,14 @@ class Payment extends AuditableEntity {
         this.status = PaymentStatus.FAILED;
     }
 
-    /** The money arrived but the order could not be paid any more (hold expired or order cancelled). */
+    /**
+     * The money goes back: either it arrived but the order could not be paid any more (PENDING), or a paid order
+     * was refunded (SUCCEEDED).
+     */
     void refund() {
-        requirePending();
+        if (status != PaymentStatus.PENDING && status != PaymentStatus.SUCCEEDED) {
+            throw new ConflictException("The payment is already " + status + ".");
+        }
         this.status = PaymentStatus.REFUNDED;
     }
 

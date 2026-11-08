@@ -30,7 +30,11 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 class FakePayService {
 
-    private record FakePayment(BigDecimal amount, String reference, boolean completed) {
+    /** {@code outcome} is null until the customer completes the payment. */
+    private record FakePayment(BigDecimal amount, String reference, String outcome, boolean refunded) {
+        boolean completed() {
+            return outcome != null;
+        }
     }
 
     private final Map<String, FakePayment> payments = new ConcurrentHashMap<>();
@@ -52,7 +56,7 @@ class FakePayService {
 
     FakePayController.CreateResponse create(BigDecimal amount, String reference) {
         String id = "fp_" + UUID.randomUUID().toString().replace("-", "");
-        payments.put(id, new FakePayment(amount, reference, false));
+        payments.put(id, new FakePayment(amount, reference, null, false));
         return new FakePayController.CreateResponse(id,
                 properties.baseUrl() + "/fakepay/payments/" + id + "/complete");
     }
@@ -65,10 +69,22 @@ class FakePayService {
         }
         // atomic "complete once": replace only succeeds if the stored value is still the not-completed one
         if (payment.completed() || !payments.replace(id, payment,
-                new FakePayment(payment.amount(), payment.reference(), true))) {
+                new FakePayment(payment.amount(), payment.reference(), outcome, false))) {
             throw new ConflictException("The payment was already completed.");
         }
         webhookSender.execute(() -> sendWebhook(new WebhookPayload(id, outcome)));
+    }
+
+    /** Gives the money of a successful payment back. Repeating it for the same payment is harmless. */
+    void refund(String id) {
+        FakePayment payment = payments.get(id);
+        if (payment == null) {
+            throw new ResourceNotFoundException("Payment not found.");
+        }
+        if (!WebhookPayload.SUCCESS.equals(payment.outcome())) {
+            throw new ConflictException("Only a successful payment can be refunded.");
+        }
+        payments.put(id, new FakePayment(payment.amount(), payment.reference(), payment.outcome(), true));
     }
 
     private void sendWebhook(WebhookPayload payload) {

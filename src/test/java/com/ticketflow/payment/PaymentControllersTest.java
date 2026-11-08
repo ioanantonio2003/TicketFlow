@@ -27,7 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-@WebMvcTest({CheckoutController.class, WebhookController.class})
+@WebMvcTest({CheckoutController.class, WebhookController.class, RefundController.class})
 @Import({SecurityConfig.class, SecurityErrorHandlers.class})
 class PaymentControllersTest {
 
@@ -38,6 +38,8 @@ class PaymentControllersTest {
 
     @MockitoBean
     private CheckoutService checkoutService;
+    @MockitoBean
+    private RefundService refundService;
     @MockitoBean
     private WebhookVerifier verifier;
     @MockitoBean
@@ -133,5 +135,39 @@ class PaymentControllersTest {
 
         mockMvc.perform(post("/api/payments/webhook").contentType(MediaType.APPLICATION_JSON).content(WEBHOOK_BODY))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ---- refund ----
+
+    @Test
+    void customerRefundsAnOrder() throws Exception {
+        when(refundService.refundMyOrder(7L, 55L))
+                .thenReturn(new com.ticketflow.payment.dto.RefundResponse(55L, new java.math.BigDecimal("30.00"), "REFUNDED"));
+
+        mockMvc.perform(post("/api/orders/55/refund").with(as(7, "ROLE_CUSTOMER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUNDED"))
+                .andExpect(jsonPath("$.amount").value(30.00));
+    }
+
+    @Test
+    void refundErrorsAreProblemDetails() throws Exception {
+        when(refundService.refundMyOrder(7L, 55L)).thenThrow(new com.ticketflow.common.exception.BusinessRuleException(
+                "Refunds are possible until 24 hours before the event starts."));
+        when(refundService.refundMyOrder(7L, 56L)).thenThrow(new ConflictException("Only a paid order can be refunded."));
+        when(refundService.refundMyOrder(7L, 57L)).thenThrow(
+                new com.ticketflow.common.exception.ExternalServiceException("The refund could not be completed."));
+
+        mockMvc.perform(post("/api/orders/55/refund").with(as(7, "ROLE_CUSTOMER")))
+                .andExpect(status().isUnprocessableContent());
+        mockMvc.perform(post("/api/orders/56/refund").with(as(7, "ROLE_CUSTOMER"))).andExpect(status().isConflict());
+        mockMvc.perform(post("/api/orders/57/refund").with(as(7, "ROLE_CUSTOMER"))).andExpect(status().isBadGateway());
+    }
+
+    @Test
+    void refundIsForCustomersOnly() throws Exception {
+        mockMvc.perform(post("/api/orders/55/refund")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/orders/55/refund").with(as(7, "ROLE_ORGANIZER"))).andExpect(status().isForbidden());
+        verifyNoInteractions(refundService);
     }
 }

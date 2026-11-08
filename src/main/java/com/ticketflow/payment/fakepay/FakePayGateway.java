@@ -40,4 +40,14 @@ class FakePayGateway implements PaymentGateway {
             throw new ExternalServiceException("The payment provider is not available. Please try again.");
         }
     }
+
+    @Override
+    public void refund(String providerPaymentId) {
+        try {
+            restClient.post().uri("/fakepay/payments/{id}/refund", providerPaymentId).retrieve().toBodilessEntity();
+        } catch (RestClientException e) {
+            log.warn("Payment provider refund failed: {}", e.getMessage());
+            throw new ExternalServiceException("The refund could not be completed. Please try again.");
+        }
+    }
 }

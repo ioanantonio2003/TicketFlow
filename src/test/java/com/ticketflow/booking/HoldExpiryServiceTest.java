@@ -40,7 +40,7 @@ class HoldExpiryServiceTest {
     @BeforeEach
     void setUp() {
         service = new HoldExpiryService(orderRepository, seatHoldRepository, events,
-                new HoldProperties(Duration.ofMinutes(10), 6, Duration.ofSeconds(30), 100), Clock.fixed(NOW, ZoneOffset.UTC));
+                new HoldProperties(Duration.ofMinutes(10), 6, Duration.ofSeconds(30), 100, Duration.ofHours(24)), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static Order pendingOrder(long id) {

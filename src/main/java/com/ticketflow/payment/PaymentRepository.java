@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 interface PaymentRepository extends JpaRepository<Payment, Long> {
 
+    Optional<Payment> findFirstByOrderIdAndStatus(Long orderId, PaymentStatus status);
+
     /** Locked, so two deliveries of the same webhook are handled one after the other. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.providerPaymentId = :providerPaymentId")

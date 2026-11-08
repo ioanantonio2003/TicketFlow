@@ -39,6 +39,13 @@ class FakePayController {
         return ResponseEntity.status(201).body(fakePay.create(request.amount(), request.reference()));
     }
 
+    /** Called by our refund flow. Idempotent: a second refund of the same payment answers 200 too. */
+    @PostMapping("/{id}/refund")
+    ResponseEntity<Void> refund(@PathVariable String id) {
+        fakePay.refund(id);
+        return ResponseEntity.ok().build();
+    }
+
     /**
      * Plays the customer paying (or failing to). Answers 202 at once; the webhook is sent in the background,
      * like a real provider notifying us later.

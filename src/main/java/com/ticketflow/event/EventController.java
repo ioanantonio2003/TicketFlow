@@ -46,6 +46,12 @@ class EventController {
         return eventService.setPrices(CurrentUser.id(jwt), id, request);
     }
 
+    /** Cancels the event; its customers are refunded and notified after the response's transaction commits. */
+    @PostMapping("/{id}/cancel")
+    EventResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return eventService.cancel(CurrentUser.id(jwt), id);
+    }
+
     @PostMapping("/{id}/publish")
     EventResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return eventService.publish(CurrentUser.id(jwt), id);

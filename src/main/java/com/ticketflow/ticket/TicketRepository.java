@@ -18,6 +18,14 @@ interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Optional<Ticket> findByCode(String code);
 
+    /** Refund: tickets that were never scanned stop being valid. A ticket already USED stays USED. */
+    @Modifying
+    @Query("""
+            update Ticket t set t.status = com.ticketflow.ticket.TicketStatus.CANCELLED, t.updatedAt = :now
+            where t.orderId = :orderId and t.status = com.ticketflow.ticket.TicketStatus.VALID
+            """)
+    int cancelValidOfOrder(@Param("orderId") Long orderId, @Param("now") Instant now);
+
     @Query("select t.status from Ticket t where t.id = :id")
     TicketStatus findStatusById(@Param("id") Long id);
 

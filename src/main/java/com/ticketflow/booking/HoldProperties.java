@@ -8,10 +8,13 @@ import org.springframework.validation.annotation.Validated;
 
 /**
  * {@code app.booking.*}: how long a hold lasts, how many seats one customer may have per event, and how
- * the job that releases expired holds is paced.
+ * the job that releases expired holds is paced. {@code expiryBatchSize} is also the batch size of the other
+ * background work (cancelling and refunding the orders of a cancelled event). {@code refundDeadline} is how long
+ * before the event starts a paid order can still be refunded.
  */
 @Validated
 @ConfigurationProperties("app.booking")
 public record HoldProperties(@NotNull Duration holdDuration, @Min(1) int maxSeatsPerEvent,
-                             @NotNull Duration expiryCheckInterval, @Min(1) int expiryBatchSize) {
+                             @NotNull Duration expiryCheckInterval, @Min(1) int expiryBatchSize,
+                             @NotNull Duration refundDeadline) {
 }

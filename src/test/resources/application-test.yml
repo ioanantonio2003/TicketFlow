@@ -4,6 +4,9 @@ spring:
     show-sql: false
 
 app:
+  notification:
+    # tests that look at emails switch it on and use a capturing mail sender
+    enabled: false
   booking:
     # the job never fires during tests; they call the service directly
     expiry-check-interval: 1h

@@ -1,4 +1,8 @@
 spring:
+  mail:
+    # Mailpit in development (compose.yaml); production sets MAIL_HOST / MAIL_PORT
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
   application:
     name: ticketflow
   threads:
@@ -26,7 +30,12 @@ app:
     # how often expired holds are released, and how many orders one transaction handles
     expiry-check-interval: 30s
     expiry-batch-size: 100
+    # a paid order can be refunded until this long before the event starts
+    refund-deadline: 24h
 
+  notification:
+    from: noreply@ticketflow.local
+    enabled: true
   payment:
     # where the simulated provider is reachable (it runs inside this same application) and the shared secret
     # used to sign its webhooks; the secret is set per profile

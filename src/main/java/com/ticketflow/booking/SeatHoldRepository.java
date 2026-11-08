@@ -62,14 +62,23 @@ class SeatHoldRepository {
      * running this twice is harmless. Returns the released seat ids per event.
      */
     Map<Long, List<Long>> releaseSeats(Collection<Long> orderIds) {
+        return release("HELD", orderIds);
+    }
+
+    /** SOLD -> AVAILABLE for a refunded order (the caller has checked that the event allows it). */
+    Map<Long, List<Long>> releaseSoldSeats(Long orderId) {
+        return release("SOLD", List.of(orderId));
+    }
+
+    private Map<Long, List<Long>> release(String fromStatus, Collection<Long> orderIds) {
         Map<Long, List<Long>> released = new LinkedHashMap<>();
         jdbc.query("""
                         update event_seats
                         set status = 'AVAILABLE', order_id = null, hold_expires_at = null, version = version + 1
-                        where order_id in (:orderIds) and status = 'HELD'
+                        where order_id in (:orderIds) and status = :fromStatus
                         returning id, event_id
                         """,
-                new MapSqlParameterSource("orderIds", orderIds),
+                new MapSqlParameterSource("orderIds", orderIds).addValue("fromStatus", fromStatus),
                 rs -> {
                     released.computeIfAbsent(rs.getLong("event_id"), k -> new ArrayList<>()).add(rs.getLong("id"));
                 });

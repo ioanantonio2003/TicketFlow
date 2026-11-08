@@ -184,4 +184,23 @@ class EventControllerTest {
                 .andExpect(jsonPath("$.content[0].title").value("Concert"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
+
+    @Test
+    void organizerCancelsAnEvent() throws Exception {
+        when(eventService.cancel(7L, 3L)).thenReturn(response(EventStatus.CANCELLED));
+
+        mockMvc.perform(post("/api/events/3/cancel").with(as(7, "ROLE_ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    void cancellingIsForOrganizersAndSomeoneElsesEventIs404() throws Exception {
+        mockMvc.perform(post("/api/events/3/cancel").with(as(5, "ROLE_CUSTOMER"))).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/events/3/cancel")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(eventService);
+
+        when(eventService.cancel(7L, 99L)).thenThrow(new com.ticketflow.common.exception.ResourceNotFoundException("Event not found."));
+        mockMvc.perform(post("/api/events/99/cancel").with(as(7, "ROLE_ORGANIZER"))).andExpect(status().isNotFound());
+    }
 }

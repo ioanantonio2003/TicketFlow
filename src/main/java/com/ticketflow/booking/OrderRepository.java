@@ -4,6 +4,7 @@ import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,6 +42,21 @@ interface OrderRepository extends JpaRepository<Order, Long> {
             for update skip locked
             """, nativeQuery = true)
     List<Order> claimExpired(@Param("now") Instant now, @Param("batchSize") int batchSize);
+
+    /** Ids of an event's PAID orders after {@code afterId}, in id order: a cursor, so a failing order cannot loop. */
+    @Query("select o.id from Order o where o.eventId = :eventId and o.status = com.ticketflow.booking.OrderStatus.PAID "
+            + "and o.id > :afterId order by o.id")
+    List<Long> findPaidIdsByEvent(@Param("eventId") Long eventId, @Param("afterId") Long afterId, Limit limit);
+
+    /** Claims PENDING orders of an event (same {@code skip locked} idea as {@link #claimExpired}). */
+    @Query(value = """
+            select * from orders
+            where status = 'PENDING' and event_id = :eventId
+            order by id
+            limit :batchSize
+            for update skip locked
+            """, nativeQuery = true)
+    List<Order> claimPendingOfEvent(@Param("eventId") Long eventId, @Param("batchSize") int batchSize);
 
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
 }

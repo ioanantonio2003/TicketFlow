@@ -47,4 +47,17 @@ class OrderTest {
             assertThat(order.getStatus()).isEqualTo(status);
         }
     }
+
+    @Test
+    void onlyAPaidOrderCanBeRefunded() {
+        Order paid = order(OrderStatus.PAID);
+        paid.refund();
+        assertThat(paid.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+
+        for (OrderStatus status : OrderStatus.values()) {
+            if (status != OrderStatus.PAID) {
+                assertThatThrownBy(() -> order(status).refund()).isInstanceOf(ConflictException.class);
+            }
+        }
+    }
 }

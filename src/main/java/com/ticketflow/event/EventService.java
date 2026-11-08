@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class EventService {
     private final EventMapper eventMapper;
     private final VenueCatalog venueCatalog;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public EventResponse create(Long organizerId, CreateEventRequest request) {
@@ -108,6 +110,19 @@ public class EventService {
             throw new IllegalStateException("Created " + created + " event seats, expected " + expected);
         }
         return eventMapper.toResponse(event, prices);
+    }
+
+    /**
+     * Cancels a DRAFT or PUBLISHED event. The event row is locked, so a publish or a second cancel waits and then
+     * fails the status check. {@link EventCancelled} is delivered after commit; the booking and payment features
+     * react to it (cancel pending orders, refund paid ones), so this feature does not depend on them.
+     */
+    @Transactional
+    public EventResponse cancel(Long organizerId, Long eventId) {
+        Event event = findOwnedForUpdate(organizerId, eventId);
+        event.cancel();
+        events.publishEvent(new EventCancelled(event.getId(), event.getTitle()));
+        return toResponse(event);
     }
 
     @Transactional(readOnly = true)

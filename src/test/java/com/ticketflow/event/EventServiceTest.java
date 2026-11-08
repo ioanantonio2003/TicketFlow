@@ -40,6 +40,8 @@ class EventServiceTest {
     private static final Long VENUE_ID = 5L;
 
     @Mock
+    private org.springframework.context.ApplicationEventPublisher events;
+    @Mock
     private EventRepository eventRepository;
     @Mock
     private PriceCategoryRepository priceCategoryRepository;
@@ -52,7 +54,7 @@ class EventServiceTest {
     @BeforeEach
     void setUp() {
         service = new EventService(eventRepository, priceCategoryRepository, new EventMapperImpl(), venueCatalog,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), events);
         event = Event.draft(ORGANIZER, VENUE_ID, "Concert", null, EventCategory.CONCERT,
                 NOW.plus(Duration.ofDays(10)), NOW);
     }

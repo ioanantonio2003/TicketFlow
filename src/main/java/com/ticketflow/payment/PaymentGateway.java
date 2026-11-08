@@ -11,4 +11,7 @@ public interface PaymentGateway {
 
     /** Remote call: never invoke it inside a database transaction. Throws ExternalServiceException on failure. */
     ProviderPayment createPayment(BigDecimal amount, String reference);
+
+    /** Gives the money back. Calling it again for the same payment is harmless. Remote call, same rules. */
+    void refund(String providerPaymentId);
 }

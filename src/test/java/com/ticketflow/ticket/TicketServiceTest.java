@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,13 +48,15 @@ class TicketServiceTest {
     private OrderSeats orderSeats;
     @Mock
     private EventCatalog eventCatalog;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private TicketService service;
 
     @BeforeEach
     void setUp() {
         service = new TicketService(ticketRepository, codeGenerator, qrCodeGenerator, orderSeats, eventCatalog,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), events);
     }
 
     private static Ticket ticket(long id, long eventId, String code) {
@@ -81,6 +84,9 @@ class TicketServiceTest {
         assertThat(saved.getAllValues()).extracting(Ticket::getCode).containsExactly("code-a", "code-b");
         assertThat(saved.getAllValues()).extracting(Ticket::getEventSeatId).containsExactly(10L, 11L);
         assertThat(saved.getAllValues()).extracting(Ticket::getSectionName).containsExactly("Floor", "Balcony");
+        verify(events).publishEvent(new TicketsIssued(55L, 7L, 3L, "Concert", List.of(
+                new TicketsIssued.IssuedTicket("Floor", "1", 1, "code-a"),
+                new TicketsIssued.IssuedTicket("Balcony", "B", 7, "code-b"))));
         assertThat(saved.getAllValues()).allSatisfy(t -> {
             assertThat(t.getStatus()).isEqualTo(TicketStatus.VALID);
             assertThat(t.getCustomerId()).isEqualTo(7L);
@@ -96,7 +102,7 @@ class TicketServiceTest {
         assertThat(service.issue(PAID)).isZero();
 
         verify(ticketRepository, never()).save(any());
-        verifyNoInteractions(orderSeats, eventCatalog);
+        verifyNoInteractions(orderSeats, eventCatalog, events);
     }
 
     // ---- ownership ----
@@ -169,5 +175,12 @@ class TicketServiceTest {
         when(ticketRepository.findByCode("nope")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.validate(20L, "nope")).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void refundingCancelsTheNotYetUsedTicketsOfTheOrder() {
+        service.cancelValidTicketsOf(55L);
+
+        verify(ticketRepository).cancelValidOfOrder(55L, NOW);
     }
 }

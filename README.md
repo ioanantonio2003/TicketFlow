@@ -8,12 +8,26 @@ with QR codes. The hard part is concurrency: two customers can never hold or buy
 **one conditional `UPDATE` in PostgreSQL** and proven by a concurrent integration test and a k6 load test
 (1000 customers racing for 100 seats: exactly 100 winners, 0 double bookings).
 
+## Quick start
+
+You need Docker, JDK 21 and Node 20 (JDK 21 is the supported version; some JDK 23 builds crashed the JVM on Windows).
+
+```bash
+docker compose up -d                                            # PostgreSQL and Mailpit
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev           # API on http://localhost:8080 (demo data)
+cd frontend && npm install && npm run dev                       # web app on http://localhost:5173
+```
+
+On Windows PowerShell write the Maven option in quotes: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"`.
+Then open http://localhost:5173, log in with one of the [demo accounts](#development-application-on-your-machine-demo-data-swagger-ui),
+and read the emails in Mailpit at http://localhost:8025.
+
 ## Features
 
 - **Accounts**: registration, login with short-lived JWT access tokens and rotating refresh tokens with reuse detection;
   roles `CUSTOMER`, `ORGANIZER`, `ADMIN`.
 - **Venues and events**: venues with sections, rows and seats; events with a price per section; publishing generates
-  the event seats; public search, event details and a live seat map.
+  the event seats; public search, event details and a seat map (colours by status, refreshed every 5 seconds).
 - **Booking**: hold up to 6 seats per event for 10 minutes (all or nothing), automatic release of expired holds,
   cancellation.
 - **Payments**: simulated provider (FakePay) behind HTTP with signed webhooks; idempotent checkout (`Idempotency-Key`);
@@ -22,6 +36,7 @@ with QR codes. The hard part is concurrency: two customers can never hold or buy
 - **Refunds and cancellation**: refund until 24 h before the event; cancelling an event refunds every paid order.
 - **Emails** (Mailpit in development): tickets, refunds, cancellations.
 - **Reporting** for organizers: occupancy, revenue, orders by status, sales per section.
+- **Web app** (React) for customers, organizers and administrators.
 - **API docs** with Swagger UI (development only).
 
 ## Architecture
@@ -65,9 +80,11 @@ docker compose --profile app up -d --build
 curl localhost:8080/actuator/health       # {"status":"UP", ...}
 ```
 
-The application is on `http://localhost:8080`, Mailpit (the emails) on `http://localhost:8025`. The first
-administrator is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The production profile has no demo data and no
-Swagger UI.
+The web app is on `http://localhost:5173` (nginx; it forwards `/api` to the application), the API on
+`http://localhost:8080`, Mailpit (the emails) on `http://localhost:8025`. The first administrator is created from
+`ADMIN_EMAIL` / `ADMIN_PASSWORD`; log in with it, register another account and make it an organizer on the Admin page.
+The production profile has no demo data, no Swagger UI and a 10-minute hold (the `dev` profile uses 1 minute so that
+expiry is easy to try).
 
 ### Development (application on your machine, demo data, Swagger UI)
 
@@ -135,11 +152,35 @@ Main endpoints (all under `/api`, details in Swagger UI): `auth/*`, `venues`, `e
 ./mvnw verify    # unit, slice and integration tests (Docker must be running: Testcontainers starts PostgreSQL)
 ```
 
-About 450 tests: unit tests with Mockito, `@WebMvcTest` for controllers and security rules, `@DataJpaTest` against a
+About 450 backend tests: unit tests with Mockito, `@WebMvcTest` for controllers and security rules, `@DataJpaTest` against a
 real PostgreSQL for the queries, and end-to-end `*IT` tests (booking flow, payments with real HTTP and signed
 webhooks, refunds and emails, tickets, reporting). The concurrency tests start up to 200 virtual threads at the
 same moment and check invariants such as "no seat is in two orders"; removing the `status = 'AVAILABLE'` condition
 from the `UPDATE` makes them fail, which shows they test what they claim to test.
+
+## What to try in the web app
+
+| As | Try |
+|---|---|
+| Customer | filter events, pick seats, watch the hold countdown, pay or fail the payment, repeat checkout with the same key, cancel, refund, see the QR codes |
+| Second customer (other browser) | take a seat that the first one holds: `409`, and no seat of the failed request stays blocked |
+| Organizer | create a venue (`A:10, B:10` = two rows of ten seats), create an event, set prices, publish, scan a ticket twice (`409` the second time), see the statistics, cancel the event (paid orders are refunded, everybody gets an email) |
+| Admin | make a registered user an organizer (the user must log in again) |
+
+The emails of every step arrive in Mailpit.
+
+## Project layout
+
+```
+src/main/java/com/ticketflow/   one package per feature (auth, user, venue, event, booking, payment, ticket,
+                                notification, reporting) plus common and config
+src/main/resources/db/migration Flyway migrations V1..V8
+src/test/java/                  unit, slice and integration tests (Testcontainers)
+frontend/                       React + Vite + TypeScript web app (+ Dockerfile and nginx config)
+loadtest/, scripts/             k6 race test and the SQL that proves "no double booking"
+docs/adr/                       architecture decision records
+compose.yaml, Dockerfile        PostgreSQL, Mailpit, application and web app
+```
 
 ## Load test: 1000 customers, 100 seats
 

@@ -37,6 +37,12 @@ class OrderController {
                 .path("/{id}").buildAndExpand(order.id()).toUri()).body(order);
     }
 
+    /** Gives up a PENDING order: it becomes CANCELLED and its seats are released. */
+    @PostMapping("/{id}/cancel")
+    OrderResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return orderService.cancel(CurrentUser.id(jwt), id);
+    }
+
     @GetMapping("/{id}")
     OrderResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return orderService.get(CurrentUser.id(jwt), id);

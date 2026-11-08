@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ class OrderService {
     private final EventCatalog eventCatalog;
     private final HoldProperties properties;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     /**
      * Holds the requested seats for the customer. All or nothing: if any seat is not available the
@@ -67,6 +69,20 @@ class OrderService {
             total = total.add(seat.getValue());
         }
         order.assignTotal(total);
+        return toResponse(order);
+    }
+
+    /**
+     * Cancels a PENDING order and gives its seats back. The order row is locked first, so the expiry job or
+     * a second cancel cannot run at the same time; if one of them already finished the status check fails (409).
+     */
+    @Transactional
+    OrderResponse cancel(Long customerId, Long orderId) {
+        Order order = orderRepository.findByIdAndCustomerIdForUpdate(orderId, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found."));
+        order.cancel();
+        seatHoldRepository.releaseSeats(List.of(order.getId()))
+                .forEach((eventId, seatIds) -> events.publishEvent(new SeatsReleased(eventId, seatIds)));
         return toResponse(order);
     }
 

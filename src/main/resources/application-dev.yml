@@ -8,6 +8,9 @@ spring:
     show-sql: true
 
 app:
+  booking:
+    # short hold to try the expiry job by hand
+    hold-duration: 1m
   jwt:
     # development-only secret, never use it anywhere else
     secret: dev-only-secret-change-me-0123456789abcdef

@@ -196,6 +196,40 @@ class OrderFlowIT {
     }
 
     @Test
+    void cancellingFreesTheSeatsForSomeoneElseAndCannotBeRepeated() throws Exception {
+        PublishedEvent event = data().publishedEvent(5, "10.00");
+        String owner = customerToken();
+        String other = customerToken();
+        int orderId = JsonPath.read(hold(owner, event, 0, 1).andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(post("/api/orders/" + orderId + "/cancel").header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());                         // not the owner
+        mockMvc.perform(post("/api/orders/" + orderId + "/cancel").header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        assertThat(data().count("select count(*) from event_seats where event_id = ? and status = 'AVAILABLE'",
+                event.eventId())).isEqualTo(5);
+        mockMvc.perform(post("/api/orders/" + orderId + "/cancel").header("Authorization", "Bearer " + owner))
+                .andExpect(status().isConflict());                          // already cancelled
+        hold(other, event, 0, 1).andExpect(status().isCreated());           // the seats can be booked again
+    }
+
+    @Test
+    void cancellingFreesTheLimitForTheCustomer() throws Exception {
+        PublishedEvent event = data().publishedEvent(20, "10.00");
+        String token = customerToken();
+        int orderId = JsonPath.read(hold(token, event, 0, 1, 2, 3, 4, 5).andReturn().getResponse()
+                .getContentAsString(), "$.id");
+        hold(token, event, 6).andExpect(status().isUnprocessableContent());
+
+        mockMvc.perform(post("/api/orders/" + orderId + "/cancel").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        hold(token, event, 6).andExpect(status().isCreated());
+    }
+
+    @Test
     void invalidBodiesAre400() throws Exception {
         String token = customerToken();
 

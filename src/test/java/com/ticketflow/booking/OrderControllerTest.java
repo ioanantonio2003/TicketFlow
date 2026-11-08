@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ticketflow.booking.dto.OrderItemResponse;
 import com.ticketflow.booking.dto.OrderResponse;
 import com.ticketflow.common.exception.BusinessRuleException;
+import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.exception.ResourceNotFoundException;
 import com.ticketflow.common.web.PageResponse;
 import com.ticketflow.config.SecurityConfig;
@@ -164,5 +165,38 @@ class OrderControllerTest {
         verify(orderService).listMine(eq(7L), pageable.capture());
         assertThat(pageable.getValue().getPageSize()).isEqualTo(20);
         assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
+    @Test
+    void customerCancelsAnOrder() throws Exception {
+        when(orderService.cancel(7L, 55L)).thenReturn(order());
+
+        mockMvc.perform(post("/api/orders/55/cancel").with(as(7, "ROLE_CUSTOMER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(55));
+    }
+
+    @Test
+    void cancellingAnOrderThatIsNotPendingIs409() throws Exception {
+        when(orderService.cancel(7L, 55L)).thenThrow(new ConflictException("Only a pending order can be cancelled."));
+
+        mockMvc.perform(post("/api/orders/55/cancel").with(as(7, "ROLE_CUSTOMER")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Only a pending order can be cancelled."));
+    }
+
+    @Test
+    void cancellingSomeoneElsesOrderIs404() throws Exception {
+        when(orderService.cancel(7L, 99L)).thenThrow(new ResourceNotFoundException("Order not found."));
+
+        mockMvc.perform(post("/api/orders/99/cancel").with(as(7, "ROLE_CUSTOMER")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void cancelNeedsTheCustomerRole() throws Exception {
+        mockMvc.perform(post("/api/orders/55/cancel")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/orders/55/cancel").with(as(7, "ROLE_ORGANIZER"))).andExpect(status().isForbidden());
+        verifyNoInteractions(orderService);
     }
 }

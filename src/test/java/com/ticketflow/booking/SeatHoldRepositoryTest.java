@@ -32,6 +32,8 @@ class SeatHoldRepositoryTest {
     @Autowired
     private OrderItemRepository orderItemRepository;
     @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
     private JdbcTemplate jdbc;
 
     private BookingTestData data;
@@ -171,5 +173,99 @@ class SeatHoldRepositoryTest {
 
         assertThat(orderItemRepository.countActiveSeats(customer, event.eventId(), Instant.now())).isEqualTo(1);
         assertThat(orderItemRepository.countActiveSeats(customer, other.eventId(), Instant.now())).isEqualTo(1);
+    }
+
+    // ---- releasing ----
+
+    @Test
+    void releasingGivesHeldSeatsBackAndReportsThemPerEvent() {
+        List<Long> seats = event.seatIds().subList(0, 3);
+        seatHoldRepository.holdSeats(event.eventId(), seats, firstOrder, EXPIRES);
+
+        Map<Long, List<Long>> released = seatHoldRepository.releaseSeats(List.of(firstOrder));
+
+        assertThat(released).containsOnlyKeys(event.eventId());
+        assertThat(released.get(event.eventId())).containsExactlyInAnyOrderElementsOf(seats);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select status, order_id, hold_expires_at, version from event_seats where id in (?, ?, ?)",
+                seats.get(0), seats.get(1), seats.get(2));
+        assertThat(rows).allSatisfy(row -> {
+            assertThat(row.get("status")).isEqualTo("AVAILABLE");
+            assertThat(row.get("order_id")).isNull();
+            assertThat(row.get("hold_expires_at")).isNull();
+            assertThat(row.get("version")).isEqualTo(2L); // held (+1) and released (+1)
+        });
+    }
+
+    @Test
+    void releasingTwiceReleasesNothingTheSecondTime() {
+        seatHoldRepository.holdSeats(event.eventId(), event.seatIds().subList(0, 2), firstOrder, EXPIRES);
+        assertThat(seatHoldRepository.releaseSeats(List.of(firstOrder))).isNotEmpty();
+
+        assertThat(seatHoldRepository.releaseSeats(List.of(firstOrder))).isEmpty();
+    }
+
+    @Test
+    void releasingOnlyTouchesTheGivenOrdersSeats() {
+        Long mine = event.seatIds().get(0);
+        Long theirs = event.seatIds().get(1);
+        seatHoldRepository.holdSeats(event.eventId(), List.of(mine), firstOrder, EXPIRES);
+        seatHoldRepository.holdSeats(event.eventId(), List.of(theirs), secondOrder, EXPIRES);
+
+        seatHoldRepository.releaseSeats(List.of(firstOrder));
+
+        assertThat(jdbc.queryForObject("select status from event_seats where id = ?", String.class, mine))
+                .isEqualTo("AVAILABLE");
+        assertThat(jdbc.queryForObject("select status from event_seats where id = ?", String.class, theirs))
+                .isEqualTo("HELD");
+    }
+
+    @Test
+    void soldSeatsAreNeverReleased() {
+        Long seat = event.seatIds().get(0);
+        seatHoldRepository.holdSeats(event.eventId(), List.of(seat), firstOrder, EXPIRES);
+        jdbc.update("update event_seats set status = 'SOLD' where id = ?", seat);
+
+        assertThat(seatHoldRepository.releaseSeats(List.of(firstOrder))).isEmpty();
+        assertThat(jdbc.queryForObject("select status from event_seats where id = ?", String.class, seat))
+                .isEqualTo("SOLD");
+    }
+
+    @Test
+    void releasedSeatsCanBeHeldByAnotherOrder() {
+        Long seat = event.seatIds().get(0);
+        seatHoldRepository.holdSeats(event.eventId(), List.of(seat), firstOrder, EXPIRES);
+        seatHoldRepository.releaseSeats(List.of(firstOrder));
+
+        assertThat(seatHoldRepository.holdSeats(event.eventId(), List.of(seat), secondOrder, EXPIRES)).isEqualTo(1);
+    }
+
+    // ---- claiming expired orders ----
+
+    @Test
+    void onlyPendingOrdersWhoseHoldRanOutAreClaimedOldestFirst() {
+        Instant now = Instant.now();
+        long customerId = data.user("CUSTOMER");
+        long older = data.order(customerId, event.eventId(), "PENDING", now.minus(Duration.ofMinutes(20)));
+        long newer = data.order(customerId, event.eventId(), "PENDING", now.minus(Duration.ofMinutes(5)));
+        data.order(customerId, event.eventId(), "PENDING", now.plus(Duration.ofMinutes(5)));      // still holding
+        data.order(customerId, event.eventId(), "PAID", now.minus(Duration.ofMinutes(30)));        // paid, not pending
+        data.order(customerId, event.eventId(), "CANCELLED", now.minus(Duration.ofMinutes(30)));   // already final
+        // the shared database may hold other expired orders; look only at this customer's
+        List<Long> claimed = orderRepository.claimExpired(now, 1000).stream()
+                .filter(order -> order.getCustomerId().equals(customerId)).map(Order::getId).toList();
+
+        assertThat(claimed).containsExactly(older, newer);
+    }
+
+    @Test
+    void aBatchIsCappedAtTheBatchSize() {
+        Instant now = Instant.now();
+        long customerId = data.user("CUSTOMER");
+        for (int i = 0; i < 5; i++) {
+            data.order(customerId, event.eventId(), "PENDING", now.minus(Duration.ofMinutes(10 + i)));
+        }
+
+        assertThat(orderRepository.claimExpired(now, 2)).hasSize(2);
     }
 }

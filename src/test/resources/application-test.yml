@@ -4,6 +4,9 @@ spring:
     show-sql: false
 
 app:
+  booking:
+    # the job never fires during tests; they call the service directly
+    expiry-check-interval: 1h
   jwt:
     secret: test-only-secret-0123456789abcdef0123456789
   admin:

@@ -23,6 +23,9 @@ app:
   booking:
     hold-duration: 10m
     max-seats-per-event: 6
+    # how often expired holds are released, and how many orders one transaction handles
+    expiry-check-interval: 30s
+    expiry-batch-size: 100
 
 server:
   shutdown: graceful

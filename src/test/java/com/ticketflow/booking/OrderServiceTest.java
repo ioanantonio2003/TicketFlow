@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.ticketflow.booking.dto.CreateOrderRequest;
 import com.ticketflow.booking.dto.OrderResponse;
 import com.ticketflow.common.exception.BusinessRuleException;
+import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.exception.ResourceNotFoundException;
 import com.ticketflow.event.EventCatalog;
 import com.ticketflow.event.dto.EventRef;
@@ -33,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,13 +54,16 @@ class OrderServiceTest {
     private OrderReadRepository orderReadRepository;
     @Mock
     private EventCatalog eventCatalog;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private OrderService service;
 
     @BeforeEach
     void setUp() {
         service = new OrderService(orderRepository, orderItemRepository, seatHoldRepository, orderReadRepository,
-                eventCatalog, new HoldProperties(Duration.ofMinutes(10), 6), Clock.fixed(NOW, ZoneOffset.UTC));
+                eventCatalog, new HoldProperties(Duration.ofMinutes(10), 6, Duration.ofSeconds(30), 100), Clock.fixed(NOW, ZoneOffset.UTC),
+                events);
     }
 
     private void eventIsBookable() {
@@ -201,5 +206,45 @@ class OrderServiceTest {
         when(orderRepository.findByIdAndCustomerId(9L, CUSTOMER)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(CUSTOMER, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ---- cancel ----
+
+    private Order pendingOrder(long id) {
+        Order order = Order.pending(CUSTOMER, EVENT, NOW.plusSeconds(300));
+        ReflectionTestUtils.setField(order, "id", id);
+        return order;
+    }
+
+    @Test
+    void cancellingReleasesTheSeatsAndAnnouncesThem() {
+        Order order = pendingOrder(55L);
+        when(orderRepository.findByIdAndCustomerIdForUpdate(55L, CUSTOMER)).thenReturn(Optional.of(order));
+        when(seatHoldRepository.releaseSeats(List.of(55L))).thenReturn(Map.of(EVENT, List.of(10L, 11L)));
+
+        OrderResponse response = service.cancel(CUSTOMER, 55L);
+
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        verify(events).publishEvent(new SeatsReleased(EVENT, List.of(10L, 11L)));
+    }
+
+    @Test
+    void cancellingSomeoneElsesOrderIsNotFoundAndReleasesNothing() {
+        when(orderRepository.findByIdAndCustomerIdForUpdate(55L, CUSTOMER)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.cancel(CUSTOMER, 55L)).isInstanceOf(ResourceNotFoundException.class);
+
+        verifyNoInteractions(seatHoldRepository, events);
+    }
+
+    @Test
+    void anOrderThatIsNotPendingCannotBeCancelledAndReleasesNothing() {
+        Order order = pendingOrder(55L);
+        order.expire();
+        when(orderRepository.findByIdAndCustomerIdForUpdate(55L, CUSTOMER)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> service.cancel(CUSTOMER, 55L)).isInstanceOf(ConflictException.class);
+
+        verifyNoInteractions(seatHoldRepository, events);
     }
 }

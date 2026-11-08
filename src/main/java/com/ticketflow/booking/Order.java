@@ -1,5 +1,6 @@
 package com.ticketflow.booking;
 
+import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.persistence.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +19,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * A customer's order for seats of one event. A PENDING order owns the seats it holds until
- * {@code holdExpiresAt}. Payment and expiry transitions come in later steps.
+ * {@code holdExpiresAt}. It becomes CANCELLED or EXPIRED here; payment transitions come in later steps.
  */
 @Entity
 @Table(name = "orders") // "order" is a reserved word
@@ -65,6 +66,24 @@ class Order extends AuditableEntity {
     /** Called once the held seats are known and priced. */
     void assignTotal(BigDecimal total) {
         this.totalAmount = total;
+    }
+
+    /** The customer gives the seats up. Only a PENDING order can be cancelled. */
+    void cancel() {
+        requirePending("cancelled");
+        this.status = OrderStatus.CANCELLED;
+    }
+
+    /** The hold ran out without payment. Only a PENDING order can expire. */
+    void expire() {
+        requirePending("expired");
+        this.status = OrderStatus.EXPIRED;
+    }
+
+    private void requirePending(String action) {
+        if (status != OrderStatus.PENDING) {
+            throw new ConflictException("Only a pending order can be " + action + ".");
+        }
     }
 
     @Override

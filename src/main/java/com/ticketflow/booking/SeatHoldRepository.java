@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -52,6 +54,26 @@ class SeatHoldRepository {
                         .addValue("expiresAt", OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC))
                         .addValue("eventId", eventId)
                         .addValue("seatIds", eventSeatIds));
+    }
+
+    /**
+     * The mirror of {@link #holdSeats}: HELD -> AVAILABLE, only for seats still HELD by these orders. A seat
+     * that is not HELD any more (for example already released by another instance) is not touched, so
+     * running this twice is harmless. Returns the released seat ids per event.
+     */
+    Map<Long, List<Long>> releaseSeats(Collection<Long> orderIds) {
+        Map<Long, List<Long>> released = new LinkedHashMap<>();
+        jdbc.query("""
+                        update event_seats
+                        set status = 'AVAILABLE', order_id = null, hold_expires_at = null, version = version + 1
+                        where order_id in (:orderIds) and status = 'HELD'
+                        returning id, event_id
+                        """,
+                new MapSqlParameterSource("orderIds", orderIds),
+                rs -> {
+                    released.computeIfAbsent(rs.getLong("event_id"), k -> new ArrayList<>()).add(rs.getLong("id"));
+                });
+        return released;
     }
 
     /** Price of each seat currently held by the order, taken from the seat's price category. */

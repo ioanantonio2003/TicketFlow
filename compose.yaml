@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ticketflow}
+      POSTGRES_USER: ${POSTGRES_USER:-ticketflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ticketflow}
+    ports:
+      # bound to localhost only, the database is not exposed to the network
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:8025:8025"   # web UI
+      - "127.0.0.1:1025:1025"   # SMTP
+
+volumes:
+  postgres-data:

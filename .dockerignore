@@ -1,0 +1,5 @@
+# placeholder, extended when the Dockerfile is added
+target/
+.git/
+.idea/
+.env

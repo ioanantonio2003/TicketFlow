@@ -1,0 +1,12 @@
+# Local development: values match compose.yaml defaults
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:ticketflow}
+    username: ${POSTGRES_USER:ticketflow}
+    password: ${POSTGRES_PASSWORD:ticketflow}
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    org.hibernate.orm.jdbc.bind: trace

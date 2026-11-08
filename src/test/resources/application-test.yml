@@ -1,0 +1,4 @@
+# The datasource comes from the Testcontainers PostgreSQL container (@ServiceConnection)
+spring:
+  jpa:
+    show-sql: false

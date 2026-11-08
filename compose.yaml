@@ -55,5 +55,15 @@ services:
       retries: 12
       start_period: 30s
 
+  # the demo web app: static files plus a proxy to the API (http://localhost:5173)
+  frontend:
+    profiles: ["app"]
+    build: ./frontend
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
 volumes:
   postgres-data:

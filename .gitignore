@@ -41,3 +41,7 @@ notes/
 # local environment and logs
 .env
 *.log
+
+### Frontend ###
+frontend/node_modules/
+frontend/dist/

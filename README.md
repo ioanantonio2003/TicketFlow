@@ -87,6 +87,21 @@ paste the access token). The `dev` profile creates demo users and events:
 
 These credentials exist only in the `dev` profile.
 
+## Demo web app
+
+A small React + Vite + TypeScript app in [`frontend/`](frontend) covers every feature for the three roles: event list
+with filters, seat map, hold with countdown, simulated payment, tickets with QR codes, refunds, and the organizer
+screens (venues, events, prices, publish, cancel, statistics, ticket scanner) and an admin page.
+
+```bash
+# with the application running in the dev profile (demo data and users, see below)
+cd frontend && npm install && npm run dev      # http://localhost:5173, the API is proxied to localhost:8080
+```
+
+With `docker compose --profile app up -d --build` the same app is served by nginx on `http://localhost:5173`.
+The access token is kept in memory and the refresh token in `sessionStorage`; there is no live seat push, the seat map
+refreshes every 5 seconds.
+
 ## Example: from hold to ticket
 
 ```bash
@@ -182,4 +197,4 @@ event (6), refund deadline (24 h), expiry job interval and batch size.
 - Payments are simulated; a real provider would need its own client and credentials.
 - Side effects between features (emails, tickets, refunds on event cancellation) run in the same application after the
   database commit. If the process dies at that moment they are not retried; a transactional outbox would fix that.
-- Seats are not pushed to browsers live: clients poll the seat map.
+- Seats are not pushed to browsers live: the web app polls the seat map every 5 seconds.

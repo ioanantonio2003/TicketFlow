@@ -1,5 +1,6 @@
 package com.ticketflow.venue;
 
+import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.exception.ResourceNotFoundException;
 import com.ticketflow.common.web.PageResponse;
 import com.ticketflow.venue.dto.CreateVenueRequest;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ class VenueService {
 
     private final VenueRepository venueRepository;
     private final VenueMapper venueMapper;
+    // features that reference venues register a check; none may exist (ObjectProvider handles zero beans)
+    private final ObjectProvider<VenueUsageCheck> usageChecks;
 
     @Transactional
     VenueResponse create(Long organizerId, CreateVenueRequest request) {
@@ -58,13 +62,13 @@ class VenueService {
         return venueMapper.toSummary(venue);
     }
 
-    /**
-     * Step 6 adds events that reference venues. Their foreign key already refuses to delete a venue
-     * that has events (reported as 409); Step 6 also adds an explicit check with a clear message.
-     */
     @Transactional
     void delete(Long organizerId, Long venueId) {
-        venueRepository.delete(findOwned(organizerId, venueId));
+        Venue venue = findOwned(organizerId, venueId);
+        if (usageChecks.stream().anyMatch(check -> check.isVenueUsed(venueId))) {
+            throw new ConflictException("The venue has events and cannot be deleted.");
+        }
+        venueRepository.delete(venue);
     }
 
     private Venue findOwned(Long organizerId, Long venueId) {

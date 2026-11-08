@@ -2,6 +2,7 @@ package com.ticketflow.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -27,6 +28,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/venues/**").hasAnyRole("ORGANIZER", "ADMIN")
+                        // writes on events are for organizers; reading events will be public (search step)
+                        .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
+                        .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .anyRequest().authenticated()) // deny by default
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandlers)

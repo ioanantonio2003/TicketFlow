@@ -1,5 +1,6 @@
 package com.ticketflow.venue;
 
+import com.ticketflow.venue.dto.SectionRef;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -23,4 +24,15 @@ interface VenueRepository extends JpaRepository<Venue, Long> {
             group by s.section.id
             """)
     List<SectionSeatCount> countSeatsBySection(@Param("venueId") Long venueId);
+
+    @Query("""
+            select new com.ticketflow.venue.dto.SectionRef(s.id, s.name)
+            from Section s
+            where s.venue.id = :venueId
+            order by s.sortOrder, s.id
+            """)
+    List<SectionRef> findSectionRefs(@Param("venueId") Long venueId);
+
+    @Query("select count(s) from Seat s where s.section.venue.id = :venueId")
+    long countSeatsByVenue(@Param("venueId") Long venueId);
 }

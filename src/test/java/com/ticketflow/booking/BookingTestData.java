@@ -58,7 +58,7 @@ public final class BookingTestData {
         return new PublishedEvent(event, organizer, venue, seatIds);
     }
 
-    long order(long customerId, long eventId, String status, Instant holdExpiresAt) {
+    public long order(long customerId, long eventId, String status, Instant holdExpiresAt) {
         return jdbc.queryForObject(
                 "insert into orders (customer_id, event_id, status, hold_expires_at, total_amount, created_at, updated_at) "
                         + "values (?, ?, ?, ?, 0, now(), now()) returning id", Long.class,
@@ -66,7 +66,7 @@ public final class BookingTestData {
                 holdExpiresAt == null ? null : OffsetDateTime.ofInstant(holdExpiresAt, ZoneOffset.UTC));
     }
 
-    void orderItem(long orderId, long eventSeatId, String price) {
+    public void orderItem(long orderId, long eventSeatId, String price) {
         jdbc.update("insert into order_items (order_id, event_seat_id, price) values (?, ?, ?)",
                 orderId, eventSeatId, new BigDecimal(price));
     }

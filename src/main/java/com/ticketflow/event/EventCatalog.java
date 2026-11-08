@@ -23,6 +23,13 @@ public class EventCatalog {
         return new EventRef(event.getId(), event.getTitle(), event.getStartsAt());
     }
 
+    /** The event's status as text (DRAFT, PUBLISHED, ...), for reports. */
+    @Transactional(readOnly = true)
+    public String statusOf(Long eventId) {
+        return eventRepository.findById(eventId).map(e -> e.getStatus().name())
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found."));
+    }
+
     /** True if the user organizes the event; used to decide who may validate its tickets. */
     @Transactional(readOnly = true)
     public boolean isOrganizer(Long eventId, Long userId) {

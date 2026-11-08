@@ -15,6 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.data.core.TypeInformation;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -73,6 +75,16 @@ class ErrorTestController {
     @GetMapping("/unknown-property")
     void unknownProperty() {
         throw new PropertyReferenceException("nope", TypeInformation.of(String.class), List.of());
+    }
+
+    @GetMapping("/bad-credentials")
+    void badCredentials() {
+        throw new BadCredentialsException("password does not match for user secret@example.com");
+    }
+
+    @GetMapping("/access-denied")
+    void accessDenied() {
+        throw new AccessDeniedException("internal rule details");
     }
 
     @GetMapping("/unexpected")

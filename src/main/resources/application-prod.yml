@@ -4,3 +4,11 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  admin:
+    # optional: creates the first admin on startup if no admin exists
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}

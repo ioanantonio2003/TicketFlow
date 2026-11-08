@@ -25,7 +25,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-@WebMvcTest
+@WebMvcTest(ErrorTestController.class)
 @ActiveProfiles("error-test")
 @Import({ErrorTestController.class, GlobalExceptionHandlerTest.OpenSecurity.class})
 class GlobalExceptionHandlerTest {
@@ -70,6 +70,19 @@ class GlobalExceptionHandlerTest {
         assertProblem(get("/test-errors/data-integrity"), 409, "Conflict",
                 "The request conflicts with existing data.")
                 .andExpect(content().string(not(containsString("uk_secret_table"))));
+    }
+
+    @Test
+    void authenticationExceptionMapsTo401WithGenericMessage() throws Exception {
+        assertProblem(get("/test-errors/bad-credentials"), 401, "Unauthorized", "Authentication failed.")
+                .andExpect(content().string(not(containsString("secret@example.com"))));
+    }
+
+    @Test
+    void accessDeniedMapsTo403WithGenericMessage() throws Exception {
+        assertProblem(get("/test-errors/access-denied"), 403, "Forbidden",
+                "You do not have permission to perform this action.")
+                .andExpect(content().string(not(containsString("internal rule"))));
     }
 
     @Test

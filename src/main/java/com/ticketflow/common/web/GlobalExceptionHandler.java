@@ -18,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -55,6 +57,21 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ForbiddenOperationException.class)
     ResponseEntity<Object> handleForbidden(ForbiddenOperationException ex, WebRequest request) {
         return respond(ex, HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), null, request);
+    }
+
+    // ---- security (thrown from inside controllers/services; filter-level errors use SecurityErrorHandlers) ----
+
+    /** Failed login: wrong password, unknown email, disabled account. One generic answer for all. */
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<Object> handleAuthentication(AuthenticationException ex, WebRequest request) {
+        return respond(ex, HttpStatus.UNAUTHORIZED, "Unauthorized", "Authentication failed.", null, request);
+    }
+
+    /** Anonymous callers are stopped earlier by the filter chain, so here the caller is authenticated. */
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+        return respond(ex, HttpStatus.FORBIDDEN, "Forbidden",
+                "You do not have permission to perform this action.", null, request);
     }
 
     // ---- validation ----

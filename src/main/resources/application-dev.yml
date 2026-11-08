@@ -7,6 +7,10 @@ spring:
   jpa:
     show-sql: true
 
-logging:
-  level:
-    org.hibernate.orm.jdbc.bind: trace
+app:
+  jwt:
+    # development-only secret, never use it anywhere else
+    secret: dev-only-secret-change-me-0123456789abcdef
+  admin:
+    email: admin@ticketflow.local
+    password: admin12345

@@ -2,26 +2,50 @@ package com.ticketflow.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Temporary security setup: only the health endpoint is public, everything else is denied.
- * Replaced by JWT-based security in the authentication step.
- */
 @Configuration
-class SecurityConfig {
+public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityErrorHandlers errorHandlers,
+                                            JwtAuthenticationConverter jwtAuthenticationConverter)
+            throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // stateless API, no cookies
+                // CSRF protects browsers that send credentials automatically (cookies). This API is
+                // stateless and reads the token from the Authorization header, which a malicious site
+                // cannot make the browser attach, so CSRF protection would add nothing.
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .anyRequest().denyAll())
-                .httpBasic(Customizer.withDefaults());
+                        .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/health/**",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()) // deny by default
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(errorHandlers)
+                        .accessDeniedHandler(errorHandlers))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+                        // the resource server has its own handlers for bad tokens: use the same ones
+                        .authenticationEntryPoint(errorHandlers)
+                        .accessDeniedHandler(errorHandlers));
         return http.build();
+    }
+
+    /** The "roles" claim already contains values like ROLE_ADMIN, so no extra prefix is added. */
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
+        authorities.setAuthoritiesClaimName("roles");
+        authorities.setAuthorityPrefix("");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authorities);
+        return converter;
     }
 }

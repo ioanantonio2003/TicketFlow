@@ -11,6 +11,11 @@ spring:
   flyway:
     enabled: true
 
+app:
+  jwt:
+    issuer: ticketflow
+    access-token-ttl: 15m
+
 server:
   shutdown: graceful
 

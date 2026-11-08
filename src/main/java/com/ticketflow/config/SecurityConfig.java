@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/health/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/venues/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .anyRequest().authenticated()) // deny by default
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandlers)

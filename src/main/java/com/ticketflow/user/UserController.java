@@ -1,5 +1,6 @@
 package com.ticketflow.user;
 
+import com.ticketflow.common.web.CurrentUser;
 import com.ticketflow.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +18,6 @@ class UserController {
 
     @GetMapping("/me")
     UserResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return userService.getMe(Long.valueOf(jwt.getSubject())); // subject = user id
+        return userService.getMe(CurrentUser.id(jwt));
     }
 }

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.ticketflow.auth.dto.AuthResponse;
 import com.ticketflow.auth.dto.LoginRequest;
+import com.ticketflow.auth.dto.RefreshTokenRequest;
 import com.ticketflow.auth.dto.RegisterRequest;
 import com.ticketflow.common.exception.BusinessRuleException;
 import com.ticketflow.common.exception.ConflictException;
@@ -37,6 +38,8 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
     @Mock
     private TokenService tokenService;
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private AuthService authService;
@@ -81,10 +84,12 @@ class AuthServiceTest {
         UserResponse user = new UserResponse(7L, "ana@example.com", "Ana", Role.CUSTOMER);
         when(userService.findById(7L)).thenReturn(user);
         when(tokenService.createAccessToken(user)).thenReturn(new TokenService.AccessToken("jwt", 900));
+        when(refreshTokenService.issue(7L)).thenReturn("refresh");
 
         AuthResponse response = authService.login(new LoginRequest("ana@example.com", "plain-password"));
 
         assertThat(response.accessToken()).isEqualTo("jwt");
+        assertThat(response.refreshToken()).isEqualTo("refresh");
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(900);
         assertThat(response.user()).isEqualTo(user);
@@ -97,5 +102,34 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(new LoginRequest("ana@example.com", "wrong")))
                 .isInstanceOf(BadCredentialsException.class);
         verify(tokenService, never()).createAccessToken(any());
+    }
+
+    @Test
+    void refreshReturnsNewPairForTheOwnerOfTheToken() {
+        UserResponse user = new UserResponse(7L, "ana@example.com", "Ana", Role.ORGANIZER);
+        when(refreshTokenService.refresh("old")).thenReturn(new RefreshTokenService.Rotation(7L, "new"));
+        when(userService.findById(7L)).thenReturn(user);
+        when(tokenService.createAccessToken(user)).thenReturn(new TokenService.AccessToken("jwt", 900));
+
+        AuthResponse response = authService.refresh(new RefreshTokenRequest("old"));
+
+        assertThat(response.refreshToken()).isEqualTo("new");
+        assertThat(response.user().role()).isEqualTo(Role.ORGANIZER); // role read fresh from the database
+    }
+
+    @Test
+    void refreshPropagatesInvalidToken() {
+        when(refreshTokenService.refresh("bad")).thenThrow(new InvalidTokenException("reuse"));
+
+        assertThatThrownBy(() -> authService.refresh(new RefreshTokenRequest("bad")))
+                .isInstanceOf(InvalidTokenException.class);
+        verify(tokenService, never()).createAccessToken(any());
+    }
+
+    @Test
+    void logoutRevokesTheToken() {
+        authService.logout(new RefreshTokenRequest("tok"));
+
+        verify(refreshTokenService).logout("tok");
     }
 }

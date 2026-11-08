@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -104,13 +105,54 @@ class AuthControllerTest {
     @Test
     void loginSuccessReturnsToken() throws Exception {
         UserResponse user = new UserResponse(1L, "ana@example.com", "Ana", Role.CUSTOMER);
-        when(authService.login(any())).thenReturn(new AuthResponse("jwt", "Bearer", 900, user));
+        when(authService.login(any())).thenReturn(new AuthResponse("jwt", "refresh", "Bearer", 900, user));
 
         mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"ana@example.com\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("jwt"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.expiresIn").value(900));
+    }
+
+    @Test
+    void refreshReturnsNewTokenPair() throws Exception {
+        UserResponse user = new UserResponse(1L, "ana@example.com", "Ana", Role.CUSTOMER);
+        when(authService.refresh(any())).thenReturn(new AuthResponse("jwt2", "refresh2", "Bearer", 900, user));
+
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"abc\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("jwt2"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh2"));
+    }
+
+    @Test
+    void refreshWithInvalidTokenReturns401WithGenericMessage() throws Exception {
+        when(authService.refresh(any())).thenThrow(new InvalidTokenException("Refresh token reuse detected"));
+
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"abc\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Authentication failed."))
+                .andExpect(content().string(not(containsString("reuse"))));
+    }
+
+    @Test
+    void refreshWithBlankTokenReturns400() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("refreshToken"));
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void logoutReturns204() throws Exception {
+        mockMvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"abc\"}"))
+                .andExpect(status().isNoContent());
+        verify(authService).logout(any());
     }
 }

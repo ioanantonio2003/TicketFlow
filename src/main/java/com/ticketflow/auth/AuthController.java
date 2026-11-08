@@ -2,6 +2,7 @@ package com.ticketflow.auth;
 
 import com.ticketflow.auth.dto.AuthResponse;
 import com.ticketflow.auth.dto.LoginRequest;
+import com.ticketflow.auth.dto.RefreshTokenRequest;
 import com.ticketflow.auth.dto.RegisterRequest;
 import com.ticketflow.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -30,5 +31,17 @@ class AuthController {
     @PostMapping("/login")
     AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/refresh")
+    AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refresh(request);
+    }
+
+    /** 204 whether or not the token existed: logging out twice is not an error. */
+    @PostMapping("/logout")
+    ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }

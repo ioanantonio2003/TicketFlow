@@ -23,13 +23,13 @@ class TokenServiceTest {
     private final UserResponse ana = new UserResponse(42L, "ana@example.com", "Ana", Role.ORGANIZER);
 
     private TokenService tokenService(Instant now, String secret) {
-        JwtProperties properties = new JwtProperties(secret, "ticketflow", Duration.ofMinutes(15));
+        JwtProperties properties = new JwtProperties(secret, "ticketflow", Duration.ofMinutes(15), Duration.ofDays(7));
         return new TokenService(new JwtConfig().jwtEncoder(properties), properties,
                 Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private JwtDecoder decoder(String secret) {
-        return new JwtConfig().jwtDecoder(new JwtProperties(secret, "ticketflow", Duration.ofMinutes(15)));
+        return new JwtConfig().jwtDecoder(new JwtProperties(secret, "ticketflow", Duration.ofMinutes(15), Duration.ofDays(7)));
     }
 
     @Test
@@ -63,7 +63,7 @@ class TokenServiceTest {
 
     @Test
     void tokenFromAnotherIssuerIsRejected() {
-        JwtProperties other = new JwtProperties(SECRET, "someone-else", Duration.ofMinutes(15));
+        JwtProperties other = new JwtProperties(SECRET, "someone-else", Duration.ofMinutes(15), Duration.ofDays(7));
         String token = new TokenService(new JwtConfig().jwtEncoder(other), other, Clock.systemUTC())
                 .createAccessToken(ana).value();
 

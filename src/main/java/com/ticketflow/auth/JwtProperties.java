@@ -13,10 +13,11 @@ import org.springframework.validation.annotation.Validated;
 record JwtProperties(
         @NotBlank @Size(min = 32) String secret,
         @NotBlank String issuer,
-        @NotNull Duration accessTokenTtl) {
+        @NotNull Duration accessTokenTtl,
+        @NotNull Duration refreshTokenTtl) {
 
     @Override
     public String toString() {
-        return "JwtProperties[issuer=" + issuer + ", accessTokenTtl=" + accessTokenTtl + "]"; // no secret
+        return "JwtProperties[issuer=" + issuer + ", accessTokenTtl=" + accessTokenTtl + ", refreshTokenTtl=" + refreshTokenTtl + "]"; // no secret
     }
 }

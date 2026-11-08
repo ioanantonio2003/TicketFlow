@@ -18,10 +18,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Every method takes the id of the calling organizer; a venue of someone else is "not found". */
+/**
+ * Every method takes the id of the calling organizer; a venue of someone else is "not found".
+ * Public so that tooling such as the dev data seeder can create venues through the normal rules.
+ */
 @Service
 @RequiredArgsConstructor
-class VenueService {
+public class VenueService {
 
     private final VenueRepository venueRepository;
     private final VenueMapper venueMapper;
@@ -29,7 +32,7 @@ class VenueService {
     private final ObjectProvider<VenueUsageCheck> usageChecks;
 
     @Transactional
-    VenueResponse create(Long organizerId, CreateVenueRequest request) {
+    public VenueResponse create(Long organizerId, CreateVenueRequest request) {
         Venue venue = new Venue(organizerId, request.name().trim(), request.city().trim(),
                 request.address().trim());
         VenueLayoutGenerator.generate(venue, request.sections());

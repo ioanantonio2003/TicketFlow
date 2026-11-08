@@ -1,5 +1,6 @@
 package com.ticketflow.common.web;
 
+import com.ticketflow.common.exception.BadRequestException;
 import com.ticketflow.common.exception.BusinessRuleException;
 import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.exception.ForbiddenOperationException;
@@ -45,6 +46,11 @@ class ErrorTestController {
     @GetMapping("/not-found")
     void notFound() {
         throw new ResourceNotFoundException("Event 42 not found");
+    }
+
+    @GetMapping("/bad-request")
+    void badRequest() {
+        throw new BadRequestException("Unsupported sort property");
     }
 
     @GetMapping("/conflict")

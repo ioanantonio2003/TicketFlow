@@ -24,10 +24,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Every method takes the id of the calling organizer; someone else's event is "not found". */
+/**
+ * Organizer use cases. Every method takes the id of the calling organizer; someone else's event is "not found".
+ * Public so that tooling such as the dev data seeder can use the normal rules.
+ */
 @Service
 @RequiredArgsConstructor
-class EventService {
+public class EventService {
 
     private final EventRepository eventRepository;
     private final PriceCategoryRepository priceCategoryRepository;
@@ -36,7 +39,7 @@ class EventService {
     private final Clock clock;
 
     @Transactional
-    EventResponse create(Long organizerId, CreateEventRequest request) {
+    public EventResponse create(Long organizerId, CreateEventRequest request) {
         venueCatalog.requireOwned(request.venueId(), organizerId); // 404 if the venue is not mine
         Event event = Event.draft(organizerId, request.venueId(), request.title().trim(),
                 trimOrNull(request.description()), request.category(), request.startsAt(), clock.instant());
@@ -54,7 +57,7 @@ class EventService {
 
     /** Replaces the prices of a DRAFT event. Existing rows are updated in place, missing ones are deleted. */
     @Transactional
-    EventResponse setPrices(Long organizerId, Long eventId, SetPricesRequest request) {
+    public EventResponse setPrices(Long organizerId, Long eventId, SetPricesRequest request) {
         Event event = findOwnedForUpdate(organizerId, eventId);
         event.assertEditable();
 
@@ -91,7 +94,7 @@ class EventService {
      * the DRAFT check.
      */
     @Transactional
-    EventResponse publish(Long organizerId, Long eventId) {
+    public EventResponse publish(Long organizerId, Long eventId) {
         Event event = findOwnedForUpdate(organizerId, eventId);
         event.publish(clock.instant());
 

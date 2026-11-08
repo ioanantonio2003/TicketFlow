@@ -26,9 +26,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/health/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                        // public catalogue: browsing events needs no account
+                        .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/venues/**").hasAnyRole("ORGANIZER", "ADMIN")
-                        // writes on events are for organizers; reading events will be public (search step)
+                        // writes on events are for organizers
                         .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")

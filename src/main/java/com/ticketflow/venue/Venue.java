@@ -21,13 +21,15 @@ import org.hibernate.annotations.OnDeleteAction;
 
 /**
  * Aggregate root: a venue owns its sections, and each section owns its seats. Sections and seats are
- * only created and removed through the venue.
+ * only created and removed through the venue. The class is public only so that the event feature can
+ * map a read-only association to it for queries (CLAUDE.md section 5); every mutating method is
+ * package-private.
  */
 @Entity
 @Table(name = "venues")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class Venue extends AuditableEntity {
+public class Venue extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

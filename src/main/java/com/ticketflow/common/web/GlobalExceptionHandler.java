@@ -1,5 +1,6 @@
 package com.ticketflow.common.web;
 
+import com.ticketflow.common.exception.BadRequestException;
 import com.ticketflow.common.exception.BusinessRuleException;
 import com.ticketflow.common.exception.ConflictException;
 import com.ticketflow.common.exception.ForbiddenOperationException;
@@ -42,6 +43,11 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<Object> handleNotFound(ResourceNotFoundException ex, WebRequest request) {
         return respond(ex, HttpStatus.NOT_FOUND, "Resource not found", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<Object> handleBadRequest(BadRequestException ex, WebRequest request) {
+        return respond(ex, HttpStatus.BAD_REQUEST, "Invalid request", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(ConflictException.class)

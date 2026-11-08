@@ -50,6 +50,11 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void badRequestMapsTo400() throws Exception {
+        assertProblem(get("/test-errors/bad-request"), 400, "Invalid request", "Unsupported sort property");
+    }
+
+    @Test
     void conflictMapsTo409() throws Exception {
         assertProblem(get("/test-errors/conflict"), 409, "Conflict", "Email already registered");
     }

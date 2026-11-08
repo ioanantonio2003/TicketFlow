@@ -4,13 +4,15 @@ import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface EventRepository extends JpaRepository<Event, Long> {
+interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
 
     Optional<Event> findByIdAndOrganizerId(Long id, Long organizerId);
 
@@ -25,6 +27,12 @@ interface EventRepository extends JpaRepository<Event, Long> {
     Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
 
     boolean existsByVenueId(Long venueId);
+
+    /** A published event with its venue loaded in the same query (public details). */
+    @EntityGraph(attributePaths = "venue")
+    Optional<Event> findWithVenueByIdAndStatus(Long id, EventStatus status);
+
+    boolean existsByIdAndStatus(Long id, EventStatus status);
 
     /**
      * Creates one AVAILABLE event seat for every seat of the event's venue, with the price category of the

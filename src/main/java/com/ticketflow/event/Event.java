@@ -5,12 +5,16 @@ import com.ticketflow.common.persistence.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import com.ticketflow.venue.Venue;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -36,6 +40,14 @@ class Event extends AuditableEntity {
     /** Plain id: the event feature talks to the venue feature through VenueCatalog, not its entities. */
     @Column(name = "venue_id", nullable = false, updatable = false)
     private Long venueId;
+
+    /**
+     * Read-only association used by the public search to filter and show the venue's city and name in
+     * the same query. Writes go through {@code venueId}.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venue_id", insertable = false, updatable = false)
+    private Venue venue;
 
     @Column(nullable = false, length = 200)
     private String title;

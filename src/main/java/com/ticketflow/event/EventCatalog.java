@@ -15,6 +15,20 @@ public class EventCatalog {
 
     private final EventRepository eventRepository;
 
+    /** Basic facts about any event, whatever its status. */
+    @Transactional(readOnly = true)
+    public EventRef get(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found."));
+        return new EventRef(event.getId(), event.getTitle(), event.getStartsAt());
+    }
+
+    /** True if the user organizes the event; used to decide who may validate its tickets. */
+    @Transactional(readOnly = true)
+    public boolean isOrganizer(Long eventId, Long userId) {
+        return eventRepository.existsByIdAndOrganizerId(eventId, userId);
+    }
+
     /**
      * The event must be PUBLISHED (anything else is "not found", so drafts stay invisible) and must not
      * have started yet.

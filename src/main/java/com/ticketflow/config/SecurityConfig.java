@@ -38,6 +38,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+                        // scanning at the entrance is for the organizer; a customer's own tickets are theirs
+                        .requestMatchers(HttpMethod.POST, "/api/tickets/validate").hasRole("ORGANIZER")
+                        .requestMatchers("/api/tickets/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated()) // deny by default
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandlers)

@@ -28,6 +28,8 @@ interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationEx
 
     boolean existsByVenueId(Long venueId);
 
+    boolean existsByIdAndOrganizerId(Long id, Long organizerId);
+
     /** A published event with its venue loaded in the same query (public details). */
     @EntityGraph(attributePaths = "venue")
     Optional<Event> findWithVenueByIdAndStatus(Long id, EventStatus status);

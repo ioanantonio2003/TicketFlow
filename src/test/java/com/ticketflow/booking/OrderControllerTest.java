@@ -128,7 +128,8 @@ class OrderControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("One or more of the selected seats are no longer available."))
-                .andExpect(content().string(not(containsString("10"))))   // does not name the seat
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .doesNotContainPattern("\\b10\\b"))   // does not name the seat
                 .andExpect(content().string(not(containsString("held"))));
     }
 

@@ -110,7 +110,9 @@ class OrderFlowIT {
         hold(second, event, 1, 0).andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("One or more of the selected seats are no longer available."))
-                .andExpect(content().string(not(containsString(String.valueOf(event.seatIds().get(0))))));
+                // the seat id must not appear as a number anywhere in the body (a random requestId may contain the digits)
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .doesNotContainPattern("\\b" + event.seatIds().get(0) + "\\b"));
 
         assertThat(data().count("select count(*) from event_seats where id = ? and status = 'AVAILABLE'",
                 event.seatIds().get(1))).isEqualTo(1); // the free seat was not kept

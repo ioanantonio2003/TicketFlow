@@ -14,6 +14,11 @@ spring:
 server:
   shutdown: graceful
 
+logging:
+  pattern:
+    # requestId is put in the MDC by RequestIdFilter
+    level: "%5p [%X{requestId:-}]"
+
 management:
   endpoints:
     web:

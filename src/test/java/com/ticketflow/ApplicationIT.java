@@ -2,6 +2,7 @@ package com.ticketflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,5 +46,13 @@ class ApplicationIT {
     void everythingElseIsDenied() throws Exception {
         mockMvc.perform(get("/api/anything"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void everyResponseHasRequestId_evenWhenSecurityRejectsIt() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(header().exists("X-Request-Id"));
+        mockMvc.perform(get("/api/anything"))
+                .andExpect(header().exists("X-Request-Id"));
     }
 }

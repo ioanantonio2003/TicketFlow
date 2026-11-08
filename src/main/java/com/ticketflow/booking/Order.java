@@ -74,6 +74,13 @@ class Order extends AuditableEntity {
         this.status = OrderStatus.CANCELLED;
     }
 
+    /** The payment arrived while the order was still PENDING; the hold deadline no longer applies. */
+    void markPaid() {
+        requirePending("paid");
+        this.status = OrderStatus.PAID;
+        this.holdExpiresAt = null;
+    }
+
     /** The hold ran out without payment. Only a PENDING order can expire. */
     void expire() {
         requirePending("expired");

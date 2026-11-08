@@ -9,6 +9,8 @@ app:
     expiry-check-interval: 1h
   jwt:
     secret: test-only-secret-0123456789abcdef0123456789
+  payment:
+    webhook-secret: test-only-fakepay-secret-0123456789
   admin:
     email: admin@test.local
     password: admin-test-password

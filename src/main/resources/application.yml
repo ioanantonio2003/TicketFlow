@@ -27,6 +27,12 @@ app:
     expiry-check-interval: 30s
     expiry-batch-size: 100
 
+  payment:
+    # where the simulated provider is reachable (it runs inside this same application) and the shared secret
+    # used to sign its webhooks; the secret is set per profile
+    base-url: http://localhost:8080
+    webhook-tolerance: 5m
+
 server:
   shutdown: graceful
 

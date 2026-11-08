@@ -24,6 +24,11 @@ interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o where o.id = :id and o.customerId = :customerId")
     Optional<Order> findByIdAndCustomerIdForUpdate(@Param("id") Long id, @Param("customerId") Long customerId);
 
+    /** Locks any order by id (no owner check): for the payment webhook, which acts for the system. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.id = :id")
+    Optional<Order> findByIdForUpdate(@Param("id") Long id);
+
     /**
      * Claims PENDING orders whose hold ran out. {@code skip locked} makes a second instance running the same
      * job pass over rows the first one is processing instead of waiting or doing the work twice.

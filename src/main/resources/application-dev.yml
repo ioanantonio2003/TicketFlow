@@ -14,6 +14,8 @@ app:
   jwt:
     # development-only secret, never use it anywhere else
     secret: dev-only-secret-change-me-0123456789abcdef
+  payment:
+    webhook-secret: dev-only-fakepay-secret-change-me
   admin:
     email: admin@ticketflow.local
     password: admin12345

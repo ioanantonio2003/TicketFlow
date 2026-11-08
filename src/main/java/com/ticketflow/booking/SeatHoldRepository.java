@@ -76,6 +76,19 @@ class SeatHoldRepository {
         return released;
     }
 
+    /**
+     * HELD -> SOLD for the seats this order still holds (same pattern as {@link #holdSeats}: the condition and
+     * the write are one statement). Returns how many seats were sold.
+     */
+    int sellSeats(Long orderId) {
+        return jdbc.update("""
+                        update event_seats
+                        set status = 'SOLD', hold_expires_at = null, version = version + 1
+                        where order_id = :orderId and status = 'HELD'
+                        """,
+                new MapSqlParameterSource("orderId", orderId));
+    }
+
     /** Price of each seat currently held by the order, taken from the seat's price category. */
     Map<Long, BigDecimal> pricesOfHeldSeats(Long orderId) {
         Map<Long, BigDecimal> prices = new LinkedHashMap<>();

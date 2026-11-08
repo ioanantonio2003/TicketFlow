@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 
 interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
+    @Query("select count(i) from OrderItem i where i.order.id = :orderId")
+    long countByOrderId(@Param("orderId") Long orderId);
+
     /**
      * Seats the customer already has for the event: in PAID orders, and in PENDING orders whose hold has
      * not run out. Expired or cancelled orders do not count.

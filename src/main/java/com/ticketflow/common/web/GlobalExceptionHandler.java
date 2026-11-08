@@ -3,6 +3,7 @@ package com.ticketflow.common.web;
 import com.ticketflow.common.exception.BadRequestException;
 import com.ticketflow.common.exception.BusinessRuleException;
 import com.ticketflow.common.exception.ConflictException;
+import com.ticketflow.common.exception.ExternalServiceException;
 import com.ticketflow.common.exception.ForbiddenOperationException;
 import com.ticketflow.common.exception.ResourceNotFoundException;
 import jakarta.validation.ConstraintViolationException;
@@ -58,6 +59,11 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     ResponseEntity<Object> handleBusinessRule(BusinessRuleException ex, WebRequest request) {
         return respond(ex, HttpStatus.UNPROCESSABLE_CONTENT, "Business rule violated", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    ResponseEntity<Object> handleExternalService(ExternalServiceException ex, WebRequest request) {
+        return respond(ex, HttpStatus.BAD_GATEWAY, "Upstream error", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(ForbiddenOperationException.class)

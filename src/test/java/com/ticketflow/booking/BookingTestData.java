@@ -14,19 +14,19 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * orders. Plain SQL because the venue and event entities belong to other features. Every call creates
  * fresh, uniquely named data, so tests never depend on each other.
  */
-final class BookingTestData {
+public final class BookingTestData {
 
     /** A published event with its seats; {@code seatIds} are event-seat ids in seat order. */
-    record PublishedEvent(long eventId, long organizerId, long venueId, List<Long> seatIds) {
+    public record PublishedEvent(long eventId, long organizerId, long venueId, List<Long> seatIds) {
     }
 
     private final JdbcTemplate jdbc;
 
-    BookingTestData(JdbcTemplate jdbc) {
+    public BookingTestData(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    long user(String role) {
+    public long user(String role) {
         return jdbc.queryForObject(
                 "insert into users (email, password_hash, display_name, role, created_at, updated_at) "
                         + "values (?, 'x', 'Test', ?, now(), now()) returning id", Long.class,
@@ -34,7 +34,7 @@ final class BookingTestData {
     }
 
     /** One section with one row of {@code seats} seats, all priced the same, all AVAILABLE, starting in 30 days. */
-    PublishedEvent publishedEvent(int seats, String price) {
+    public PublishedEvent publishedEvent(int seats, String price) {
         long organizer = user("ORGANIZER");
         long venue = jdbc.queryForObject(
                 "insert into venues (organizer_id, name, city, address, created_at, updated_at) "
@@ -71,7 +71,7 @@ final class BookingTestData {
                 orderId, eventSeatId, new BigDecimal(price));
     }
 
-    int count(String sql, Object... args) {
+    public int count(String sql, Object... args) {
         return jdbc.queryForObject(sql, Integer.class, args);
     }
 

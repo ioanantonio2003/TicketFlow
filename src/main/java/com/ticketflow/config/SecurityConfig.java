@@ -26,6 +26,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/health/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                        // the provider calls the webhook without a user token: it is verified by signature instead.
+                        // /fakepay/** is the simulated provider itself (an external system in real life)
+                        .requestMatchers(HttpMethod.POST, "/api/payments/webhook", "/fakepay/**").permitAll()
                         // public catalogue: browsing events needs no account
                         .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

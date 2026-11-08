@@ -1,5 +1,16 @@
-# placeholder, extended when the Dockerfile is added
-target/
-.git/
-.idea/
+# only pom.xml and src/ are needed to build the image
+.git
+.github
+.idea
+.mvn
+target
+notes
+docs
+loadtest
+scripts
+frontend
+*.md
 .env
+.env.*
+compose*.yaml
+Dockerfile

@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                         .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
+                        .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated()) // deny by default
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(errorHandlers)

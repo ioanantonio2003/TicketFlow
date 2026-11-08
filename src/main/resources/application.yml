@@ -20,6 +20,9 @@ app:
     issuer: ticketflow
     access-token-ttl: 15m
     refresh-token-ttl: 7d
+  booking:
+    hold-duration: 10m
+    max-seats-per-event: 6
 
 server:
   shutdown: graceful

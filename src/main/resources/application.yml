@@ -54,6 +54,10 @@ logging:
     level: "%5p [%X{requestId:-}]"
 
 management:
+  health:
+    mail:
+      # emails are best effort: an unreachable mail server must not mark the application DOWN
+      enabled: false
   endpoints:
     web:
       exposure:
